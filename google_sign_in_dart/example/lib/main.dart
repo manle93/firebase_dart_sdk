@@ -1,26 +1,20 @@
-// Copyright 2019 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-// ignore_for_file: public_member_api_docs
+// // Copyright 2019 The Flutter Authors. All rights reserved.
+// // Use of this source code is governed by a BSD-style license that can be
+// // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:html_unescape/html_unescape.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_dartio/google_sign_in_dartio.dart';
-import 'package:googleapis/gmail/v1.dart';
-import 'package:googleapis/people/v1.dart';
-import 'package:googleapis_auth/auth.dart';
 
 import 'platform_js.dart' if (dart.library.io) 'platform_io.dart';
 
-GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: <String>['email', 'profile', PeopleApi.ContactsReadonlyScope]);
+GoogleSignIn _googleSignIn = GoogleSignIn(scopes: <String>[
+  'email',
+  'profile',
+]);
 
 Future<void> main() async {
   if (isDesktop) {
@@ -46,100 +40,15 @@ class SignInDemo extends StatefulWidget {
 }
 
 class SignInDemoState extends State<SignInDemo> {
-  StreamSubscription<GoogleSignInAccount> sub;
-  AuthClient _client;
-  GoogleSignInAccount _currentUser;
-  String _contactText;
-  String _emailText;
+  late StreamSubscription<GoogleSignInAccount> sub;
+  late GoogleSignInAccount _currentUser;
+  late String _contactText;
+  late String _emailText;
 
   @override
   void initState() {
     super.initState();
-    sub = _googleSignIn.onCurrentUserChanged.listen(_onUserChanged);
     _googleSignIn.signInSilently();
-  }
-
-  Future<void> _onUserChanged(GoogleSignInAccount account) async {
-    setState(() => _currentUser = account);
-    if (_currentUser != null) {
-      _client = await _googleSignIn.authenticatedClient();
-      await _handleGetContact();
-    }
-  }
-
-  Future<void> _handleGetContact() async {
-    setState(() => _contactText = 'Loading contact info...');
-
-    final PeopleConnectionsResourceApi connectionsApi =
-        PeopleApi(_client).people.connections;
-
-    final ListConnectionsResponse listResult = await connectionsApi.list(
-      'people/me',
-      requestMask_includeField: 'person.names',
-    );
-
-    String contact;
-    final List<Person> connections = listResult.connections;
-    if (connections != null && connections.isNotEmpty) {
-      connections.shuffle();
-      final Person person = connections.firstWhere(
-        (Person person) =>
-            person.names.any((Name name) => name.displayName != null),
-        orElse: () => null,
-      );
-
-      if (person != null) {
-        final Name name =
-            person.names.firstWhere((Name name) => name.displayName != null);
-        contact = name.displayName;
-      }
-    }
-
-    setState(() {
-      if (contact != null) {
-        _contactText = contact;
-      } else {
-        _contactText = 'No contacts to display.';
-      }
-    });
-  }
-
-  Future<void> _handleGetEmail() async {
-    setState(() => _emailText = 'Loading emails...');
-
-    final bool granted = await _googleSignIn
-        .requestScopes(<String>[GmailApi.GmailReadonlyScope]);
-
-    if (!granted) {
-      setState(() => _emailText = 'Gmail scope was not granted by the user.');
-      return;
-    }
-
-    _client = await _googleSignIn.authenticatedClient();
-    final UsersMessagesResourceApi messagesApi =
-        GmailApi(_client).users.messages;
-
-    final ListMessagesResponse listResult = await messagesApi.list('me');
-
-    String messageSnippet;
-    if (listResult.messages != null && listResult.messages.isNotEmpty) {
-      for (Message message in listResult.messages..shuffle()) {
-        message = await messagesApi.get('me', message.id, format: 'FULL');
-        final String snippet = message.snippet;
-        if (snippet != null && snippet.trim().isNotEmpty) {
-          messageSnippet = HtmlUnescape().convert(snippet);
-          break;
-        }
-      }
-    }
-
-    setState(() {
-      if (messageSnippet != null) {
-        _emailText = messageSnippet;
-      } else {
-        _emailText = 'No contacts to display.';
-      }
-    });
   }
 
   Future<void> _handleSignIn() async {
@@ -176,7 +85,7 @@ class SignInDemoState extends State<SignInDemo> {
                 children: <Widget>[
                   const Text('You are not currently signed in.'),
                   const SizedBox(height: 16.0),
-                  RaisedButton(
+                  ElevatedButton(
                     onPressed: _handleSignIn,
                     child: const Text('SIGN IN'),
                   ),
@@ -199,7 +108,7 @@ class SignInDemoState extends State<SignInDemo> {
                         ),
                       ),
                 title: Text(_currentUser.displayName ?? ''),
-                subtitle: Text(_currentUser.email ?? ''),
+                subtitle: Text(_currentUser.email),
               ),
               if (_contactText != null)
                 ListTile(
@@ -221,20 +130,9 @@ class SignInDemoState extends State<SignInDemo> {
                 ),
               ButtonBar(
                 children: <Widget>[
-                  FlatButton(
+                  TextButton(
                     onPressed: _handleSignOut,
                     child: const Text('SIGN OUT'),
-                  ),
-                  FlatButton(
-                    onPressed: () {
-                      _handleGetContact();
-                      _handleGetEmail();
-                    },
-                    child: const Text('REFRESH'),
-                  ),
-                  FlatButton(
-                    onPressed: _handleGetEmail,
-                    child: const Text('ADD GMAIL SCOPE'),
                   ),
                 ],
               )

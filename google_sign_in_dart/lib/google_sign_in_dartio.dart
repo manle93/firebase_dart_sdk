@@ -233,8 +233,10 @@ class GoogleSignInDart extends platform.GoogleSignInPlatform {
 
   Future<void> _revokeToken() async {
     if (_haveValidToken) {
+      final Uri url = Uri.https('https://oauth2.googleapis.com',
+          '/revoke?token=${_tokenData.accessToken}');
       await get(
-        'https://oauth2.googleapis.com/revoke?token=${_tokenData.accessToken}',
+        url,
         headers: <String, String>{
           'content-type': 'application/x-www-form-urlencoded'
         },
@@ -245,15 +247,17 @@ class GoogleSignInDart extends platform.GoogleSignInPlatform {
   Future<void> _fetchUserProfile() async {
     if (_haveValidToken) {
       final String token = _tokenData.accessToken;
+      final Uri url =
+          Uri.https('https://openidconnect.googleapis.com', '/v1/userinfo');
       final Response response = await get(
-        'https://openidconnect.googleapis.com/v1/userinfo',
+        url,
         headers: <String, String>{
           'Authorization': 'Bearer $token',
         },
       );
 
       if (response.statusCode > 300) {
-        if (response.statusCode == 401){
+        if (response.statusCode == 401) {
           await signOut();
         }
         throw PlatformException(
@@ -310,8 +314,10 @@ class GoogleSignInDart extends platform.GoogleSignInPlatform {
     assert(_exchangeEndpoint != null);
     assert(_refreshToken != null);
 
+    final Uri url = Uri.https(_exchangeEndpoint, '');
+
     final Response response = await post(
-      _exchangeEndpoint,
+      url,
       body: json.encode(<String, String>{
         'refreshToken': _refreshToken,
         'clientId': _clientId,
